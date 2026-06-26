@@ -968,12 +968,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookBookmarks = bookmarks[currentFileName] || [];
     
     let html = '';
+    const q = filterQuery.toLowerCase().trim();
+    
+    // 1. 검색어가 없을 때 최상단 책갈피 고정 섹션 노출
+    if (!q && bookBookmarks.length > 0) {
+      html += `<li class="toc-section-header" style="padding: 0.6rem 1.5rem; font-size: 0.8rem; color: var(--color-primary); font-weight: bold; background-color: var(--color-bg); border-bottom: 1px solid var(--color-border); font-family: var(--font-sans); display: flex; align-items: center; gap: 4px;">📌 책갈피 한 화</li>`;
+      chapters.forEach((chapter, index) => {
+        if (bookBookmarks.includes(index)) {
+          const isActive = index === currentChapterIndex ? 'active' : '';
+          html += `<li class="${isActive}" data-index="${index}"><a href="#">🔖 ${chapter.title}</a></li>`;
+        }
+      });
+      html += `<li class="toc-section-header" style="padding: 0.6rem 1.5rem; font-size: 0.8rem; color: var(--color-text-muted); font-weight: bold; background-color: var(--color-bg); border-bottom: 1px solid var(--color-border); border-top: 1px solid var(--color-border); font-family: var(--font-sans); display: flex; align-items: center; gap: 4px;">📖 전체 목차</li>`;
+    }
+    
+    // 2. 전체 목록 (검색어가 있을 경우 필터링 적용)
     chapters.forEach((chapter, index) => {
       const hasBookmark = bookBookmarks.includes(index);
       
-      // 대소문자 구분 없이 제목 검색 매칭
-      if (filterQuery) {
-        const q = filterQuery.toLowerCase().trim();
+      if (q) {
         const isSearchBookmark = q === '🔖' || q === '책갈피' || q === 'bookmark';
         if (isSearchBookmark) {
           if (!hasBookmark) return;

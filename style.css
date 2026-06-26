@@ -51,18 +51,18 @@ body.theme-white {
   --color-shadow: rgba(0, 0, 0, 0.05);
 }
 
-/* Dark 테마 */
+/* Dark 테마 (따뜻한 야간 독서용 Warm Dark) */
 body.theme-dark {
-  --color-bg: #121212;
-  --color-card-bg: #1e1e1e;
-  --color-text: #e0e0e0;
-  --color-text-muted: #a0a0a0;
-  --color-border: #333333;
-  --color-border-hover: #4f4f4f;
+  --color-bg: #151412;            /* 웜 블랙/브라운 차콜 */
+  --color-card-bg: #1d1c1a;       /* 살짝 밝은 카드 배경 */
+  --color-text: #e3d7cb;          /* 눈이 아주 편안한 부드러운 웜 베이지 */
+  --color-text-muted: #968b80;    /* 톤다운된 차분한 베이지 회색 */
+  --color-border: #2e2c29;
+  --color-border-hover: #45413c;
   --color-primary: #e54b4b;
   --color-primary-hover: #ff6b6b;
   --color-primary-active: #ff8787;
-  --color-shadow: rgba(0, 0, 0, 0.3);
+  --color-shadow: rgba(0, 0, 0, 0.4);
 }
 
 /* 2. 전역 스타일 초기화 */
@@ -380,29 +380,30 @@ body.font-sans {
 
 /* 배경 테마 스와치 */
 .btn-theme {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-full);
-  border: 2px solid var(--color-border);
+  border: 1px solid var(--color-border);
   cursor: pointer;
   transition: var(--transition-fast);
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  line-height: 1;
+  background-color: var(--color-card-bg);
 }
 
 .btn-theme:hover {
   transform: scale(1.15);
+  border-color: var(--color-border-hover);
 }
 
-.btn-theme.active::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
-  background-color: var(--color-primary);
-  border-radius: var(--radius-full);
+.btn-theme.active {
+  border: 2px solid var(--color-primary) !important;
+  transform: scale(1.1);
+  box-shadow: 0 0 8px rgba(229, 75, 75, 0.4);
 }
 
 .theme-swatch-cream {
