@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const base64Str = btoa(binary);
         
-        const blob = new Blob([base64Str], { type: 'text/plain' });
+        const blob = new Blob([base64Str], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
