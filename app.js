@@ -448,7 +448,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const base64Str = btoa(binary);
         
-        const blob = new Blob([base64Str], { type: 'application/octet-stream' });
+        // 사파리 마임 스니핑 방지 및 올바른 JSON 포맷 유지를 위해 객체 형태로 래핑
+        const wrappedData = {
+          type: 'encrypted_txt_reader_backup',
+          data: base64Str
+        };
+        const wrappedJsonStr = JSON.stringify(wrappedData, null, 2);
+        
+        const blob = new Blob([wrappedJsonStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
@@ -476,18 +483,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const rawText = event.target.result.trim();
         let jsonStr = '';
         
-        // Base64 문자열인지 확인하여 디코딩 시도 (이전 평문 백업본 호환성 유지)
         try {
-          const decodedBinary = atob(rawText);
-          const len = decodedBinary.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = decodedBinary.charCodeAt(i);
+          // 1. JSON 구조로 파싱 시도 (신규 래핑 포맷 혹은 예전 평문 백업)
+          const parsed = JSON.parse(rawText);
+          if (parsed && parsed.type === 'encrypted_txt_reader_backup' && parsed.data) {
+            // 암호화된 래핑 백업 파일 해독
+            const decodedBinary = atob(parsed.data);
+            const len = decodedBinary.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = decodedBinary.charCodeAt(i);
+            }
+            jsonStr = new TextDecoder().decode(bytes);
+          } else {
+            // 이전 버전의 일반 평문 JSON 백업본
+            jsonStr = rawText;
           }
-          jsonStr = new TextDecoder().decode(bytes);
-        } catch (e) {
-          // 디코딩 실패 시 기존 평문 JSON 파일로 간주
-          jsonStr = rawText;
+        } catch (jsonErr) {
+          // 2. JSON.parse 실패 시, 순수 Base64 파일 해독 시도 (직전 구현본 호환)
+          try {
+            const decodedBinary = atob(rawText);
+            const len = decodedBinary.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = decodedBinary.charCodeAt(i);
+            }
+            jsonStr = new TextDecoder().decode(bytes);
+          } catch (base64Err) {
+            // 디코딩 실패 시 원래의 원본 텍스트 사용
+            jsonStr = rawText;
+          }
         }
         
         const bookData = JSON.parse(jsonStr);
