@@ -115,29 +115,45 @@ document.addEventListener('DOMContentLoaded', () => {
       updateFontSize(16);
     }
 
-    const savedFont = localStorage.getItem('reader_font_family');
-    const btnSerif = document.getElementById('btn-font-serif');
-    const btnSans = document.getElementById('btn-font-sans');
-    if (savedFont === 'font-sans') {
-      body.classList.remove('font-serif');
-      body.classList.add('font-sans');
-      btnSans.classList.add('active');
-      btnSerif.classList.remove('active');
-    } else {
-      body.classList.remove('font-sans');
-      body.classList.add('font-serif');
-      btnSerif.classList.add('active');
-      btnSans.classList.remove('active');
+    const savedFont = localStorage.getItem('reader_font_family') || 'font-serif';
+    const selectFont = document.getElementById('select-font-family');
+    
+    body.classList.remove('font-serif', 'font-sans', 'font-ridi', 'font-maru', 'font-kopub', 'font-pretendard', 'font-nanumgothic');
+    body.classList.add(savedFont);
+    if (selectFont) {
+      selectFont.value = savedFont;
     }
 
     const savedTheme = localStorage.getItem('reader_theme') || 'theme-cream';
-    body.classList.remove('theme-cream', 'theme-white', 'theme-dark');
+    body.classList.remove('theme-cream', 'theme-white', 'theme-dark', 'theme-sepia', 'theme-green', 'theme-custom');
     body.classList.add(savedTheme);
     
     document.querySelectorAll('.btn-theme').forEach(btn => btn.classList.remove('active'));
-    const themeBtnId = savedTheme === 'theme-cream' ? 'btn-theme-cream' :
-                       savedTheme === 'theme-white' ? 'btn-theme-white' : 'btn-theme-dark';
-    document.getElementById(themeBtnId).classList.add('active');
+    let themeBtnId = '';
+    if (savedTheme === 'theme-cream') themeBtnId = 'btn-theme-cream';
+    else if (savedTheme === 'theme-white') themeBtnId = 'btn-theme-white';
+    else if (savedTheme === 'theme-dark') themeBtnId = 'btn-theme-dark';
+    else if (savedTheme === 'theme-sepia') themeBtnId = 'btn-theme-sepia';
+    else if (savedTheme === 'theme-green') themeBtnId = 'btn-theme-green';
+    
+    if (themeBtnId) {
+      const activeBtn = document.getElementById(themeBtnId);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // 커스텀 색상 테마 불러오기
+    const customBg = localStorage.getItem('reader_custom_bg') || '#faf9f5';
+    const customText = localStorage.getItem('reader_custom_text') || '#2d2d2d';
+    const pickerBg = document.getElementById('picker-bg');
+    const pickerText = document.getElementById('picker-text');
+    if (pickerBg) pickerBg.value = customBg;
+    if (pickerText) pickerText.value = customText;
+
+    if (savedTheme === 'theme-custom') {
+      applyCustomThemeColors(customBg, customText);
+    } else {
+      clearCustomThemeColors();
+    }
   };
 
   const updateFontSize = (size) => {
@@ -159,40 +175,99 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFontSize(16);
   });
 
-  const btnSerif = document.getElementById('btn-font-serif');
-  const btnSans = document.getElementById('btn-font-sans');
+  const selectFont = document.getElementById('select-font-family');
+  if (selectFont) {
+    selectFont.addEventListener('change', (e) => {
+      const selectedFont = e.target.value;
+      body.classList.remove('font-serif', 'font-sans', 'font-ridi', 'font-maru', 'font-kopub', 'font-pretendard', 'font-nanumgothic');
+      body.classList.add(selectedFont);
+      localStorage.setItem('reader_font_family', selectedFont);
+    });
+  }
 
-  btnSerif.addEventListener('click', () => {
-    body.classList.remove('font-sans');
-    body.classList.add('font-serif');
-    btnSerif.classList.add('active');
-    btnSans.classList.remove('active');
-    localStorage.setItem('reader_font_family', 'font-serif');
-  });
+  // 커스텀 테마 제어 함수 정의
+  const applyCustomThemeColors = (bgColor, textColor) => {
+    body.style.setProperty('--color-bg', bgColor);
+    body.style.setProperty('--color-text', textColor);
+    body.style.setProperty('--color-card-bg', bgColor);
+    
+    // 어두운 테마 밝은 테마 판단에 따른 카드 보더와 텍스트 색감 조율
+    const isDarkBg = isColorDark(bgColor);
+    if (isDarkBg) {
+      body.style.setProperty('--color-border', 'rgba(255, 255, 255, 0.08)');
+      body.style.setProperty('--color-border-hover', 'rgba(255, 255, 255, 0.15)');
+      body.style.setProperty('--color-text-muted', 'rgba(255, 255, 255, 0.6)');
+    } else {
+      body.style.setProperty('--color-border', 'rgba(0, 0, 0, 0.08)');
+      body.style.setProperty('--color-border-hover', 'rgba(0, 0, 0, 0.15)');
+      body.style.setProperty('--color-text-muted', 'rgba(0, 0, 0, 0.6)');
+    }
+  };
 
-  btnSans.addEventListener('click', () => {
-    body.classList.remove('font-serif');
-    body.classList.add('font-sans');
-    btnSans.classList.add('active');
-    btnSerif.classList.remove('active');
-    localStorage.setItem('reader_font_family', 'font-sans');
-  });
+  const clearCustomThemeColors = () => {
+    body.style.removeProperty('--color-bg');
+    body.style.removeProperty('--color-text');
+    body.style.removeProperty('--color-card-bg');
+    body.style.removeProperty('--color-border');
+    body.style.removeProperty('--color-border-hover');
+    body.style.removeProperty('--color-text-muted');
+  };
+
+  const isColorDark = (hexColor) => {
+    let c = hexColor.substring(1);
+    let rgb = parseInt(c, 16);
+    let r = (rgb >> 16) & 0xff;
+    let g = (rgb >> 8) & 0xff;
+    let b = (rgb >> 0) & 0xff;
+    let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luma < 120; // 밝기 기준점
+  };
 
   const themeButtons = {
     'btn-theme-cream': 'theme-cream',
     'btn-theme-white': 'theme-white',
-    'btn-theme-dark': 'theme-dark'
+    'btn-theme-dark': 'theme-dark',
+    'btn-theme-sepia': 'theme-sepia',
+    'btn-theme-green': 'theme-green'
   };
 
   Object.entries(themeButtons).forEach(([btnId, themeClass]) => {
-    document.getElementById(btnId).addEventListener('click', (e) => {
-      body.classList.remove('theme-cream', 'theme-white', 'theme-dark');
-      body.classList.add(themeClass);
-      document.querySelectorAll('.btn-theme').forEach(btn => btn.classList.remove('active'));
-      e.target.classList.add('active');
-      localStorage.setItem('reader_theme', themeClass);
-    });
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        body.classList.remove('theme-cream', 'theme-white', 'theme-dark', 'theme-sepia', 'theme-green', 'theme-custom');
+        body.classList.add(themeClass);
+        clearCustomThemeColors();
+        
+        document.querySelectorAll('.btn-theme').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        localStorage.setItem('reader_theme', themeClass);
+      });
+    }
   });
+
+  const pickerBg = document.getElementById('picker-bg');
+  const pickerText = document.getElementById('picker-text');
+
+  const handleCustomColorChange = () => {
+    const bgColor = pickerBg.value;
+    const textColor = pickerText.value;
+    
+    body.classList.remove('theme-cream', 'theme-white', 'theme-dark', 'theme-sepia', 'theme-green');
+    body.classList.add('theme-custom');
+    
+    document.querySelectorAll('.btn-theme').forEach(b => b.classList.remove('active'));
+    applyCustomThemeColors(bgColor, textColor);
+    
+    localStorage.setItem('reader_theme', 'theme-custom');
+    localStorage.setItem('reader_custom_bg', bgColor);
+    localStorage.setItem('reader_custom_text', textColor);
+  };
+
+  if (pickerBg && pickerText) {
+    pickerBg.addEventListener('input', handleCustomColorChange);
+    pickerText.addEventListener('input', handleCustomColorChange);
+  }
 
   // 목차(TOC) 사이드바 제어
   // 목차(TOC) 사이드바 제어 및 검색 초기화
@@ -431,10 +506,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookmarks = loadBookmarks();
         const bookBookmarks = bookmarks[bookTitle] || [];
         
+        const readerSettings = {
+          theme: localStorage.getItem('reader_theme') || 'theme-cream',
+          fontFamily: localStorage.getItem('reader_font_family') || 'font-serif',
+          fontSize: localStorage.getItem('reader_font_size') || '16',
+          customBg: localStorage.getItem('reader_custom_bg') || '#faf9f5',
+          customText: localStorage.getItem('reader_custom_text') || '#2d2d2d'
+        };
+
         const cleanBook = {
           title: book.title,
           chapters: book.chapters,
-          bookmarks: bookBookmarks
+          bookmarks: bookBookmarks,
+          settings: readerSettings
         };
         
         const jsonStr = JSON.stringify(cleanBook);
@@ -524,6 +608,19 @@ document.addEventListener('DOMContentLoaded', () => {
               const bookmarks = loadBookmarks();
               bookmarks[bookData.title] = bookData.bookmarks;
               saveBookmarks(bookmarks);
+            }
+            
+            // 설정(테마, 글꼴, 글자크기, 커스텀 색상) 정보 복원
+            if (bookData.settings) {
+              const s = bookData.settings;
+              if (s.theme) localStorage.setItem('reader_theme', s.theme);
+              if (s.fontFamily) localStorage.setItem('reader_font_family', s.fontFamily);
+              if (s.fontSize) localStorage.setItem('reader_font_size', s.fontSize);
+              if (s.customBg) localStorage.setItem('reader_custom_bg', s.customBg);
+              if (s.customText) localStorage.setItem('reader_custom_text', s.customText);
+              
+              // 화면 즉시 리프레시
+              restoreSettings();
             }
             
             alert(`📥 [${bookData.title}] 책 백업본을 책장에 성공적으로 가져왔습니다!`);

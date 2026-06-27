@@ -7,7 +7,8 @@
   <!-- Google Fonts 및 Pretendard CDN 로드 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Noto+Serif+KR:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Nanum+Gothic:wght@400;700&family=Maru+Buri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-cream font-serif">
@@ -80,8 +81,16 @@
 
           <!-- 서체 모드 전환 -->
           <div class="setting-group font-family-ctrl">
-            <button class="btn-pill active" id="btn-font-serif">명조체</button>
-            <button class="btn-pill" id="btn-font-sans">고딕체</button>
+            <span class="setting-label">글꼴</span>
+            <select id="select-font-family" class="font-select">
+              <option value="font-serif">기본 명조체</option>
+              <option value="font-sans">기본 고딕체</option>
+              <option value="font-ridi">리디바탕</option>
+              <option value="font-maru">마루부리</option>
+              <option value="font-kopub">KoPub 바탕</option>
+              <option value="font-pretendard">프리텐다드</option>
+              <option value="font-nanumgothic">나눔고딕</option>
+            </select>
           </div>
 
           <!-- 배경 테마 선택 -->
@@ -89,6 +98,16 @@
             <button class="btn-theme theme-swatch-cream active" id="btn-theme-cream" title="크림 테마">🌾</button>
             <button class="btn-theme theme-swatch-white" id="btn-theme-white" title="화이트 테마">☀️</button>
             <button class="btn-theme theme-swatch-dark" id="btn-theme-dark" title="다크 테마">🌙</button>
+            <button class="btn-theme theme-swatch-sepia" id="btn-theme-sepia" title="세피아 테마">🍂</button>
+            <button class="btn-theme theme-swatch-green" id="btn-theme-green" title="민트그린 테마">🌿</button>
+            <div class="custom-color-picker" title="커스텀 색상 설정">
+              <label for="picker-bg" class="color-picker-label" title="커스텀 배경색">🎨
+                <input type="color" id="picker-bg" value="#faf9f5">
+              </label>
+              <label for="picker-text" class="color-picker-label" title="커스텀 글자색">✍️
+                <input type="color" id="picker-text" value="#2d2d2d">
+              </label>
+            </div>
           </div>
         </div>
 

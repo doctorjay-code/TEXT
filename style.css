@@ -2,6 +2,21 @@
    문학적 감성 TXT eBook 리더기 - 스타일시트 (Stitch Warm Literary Reader 기반)
    ========================================================================== */
 
+/* 폰트 외부 리소스 정의 */
+@font-face {
+  font-family: 'RIDIBatang';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.1/RIDIBatang.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'KoPubWorldBatang';
+  font-weight: 400;
+  font-style: normal;
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2205@1.0/KoPubWorldBatangPM.woff2') format('woff2');
+}
+
 /* 1. 디자인 시스템 토큰 및 변수 선언 */
 :root {
   /* 글자 크기 동적 조절을 위한 기본값 */
@@ -10,6 +25,11 @@
   /* 폰트 패밀리 구성 */
   --font-serif: 'Literata', 'Noto Serif KR', Georgia, Batang, serif;
   --font-sans: 'Plus Jakarta Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ridi: 'RIDIBatang', Georgia, serif;
+  --font-maru: 'Maru Buri', Georgia, serif;
+  --font-kopub: 'KoPubWorldBatang', Georgia, serif;
+  --font-pretendard: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-nanumgothic: 'Nanum Gothic', sans-serif;
   
   /* 둥글기 모서리 값 */
   --radius-sm: 0.25rem;
@@ -65,6 +85,48 @@ body.theme-dark {
   --color-shadow: rgba(0, 0, 0, 0.4);
 }
 
+/* Sepia 테마 */
+body.theme-sepia {
+  --color-bg: #f4ecd8;
+  --color-card-bg: #fbf6ec;
+  --color-text: #433422;
+  --color-text-muted: #826f59;
+  --color-border: #e3d5be;
+  --color-border-hover: #cbbb9e;
+  --color-primary: #a0522d;
+  --color-primary-hover: #cd853f;
+  --color-primary-active: #d2b48c;
+  --color-shadow: rgba(67, 52, 34, 0.05);
+}
+
+/* MintGreen 테마 */
+body.theme-green {
+  --color-bg: #e8f3ec;
+  --color-card-bg: #f3faf6;
+  --color-text: #1c2e24;
+  --color-text-muted: #537562;
+  --color-border: #d0e3d6;
+  --color-border-hover: #b4cfbe;
+  --color-primary: #2b8a3e;
+  --color-primary-hover: #40c057;
+  --color-primary-active: #51cf66;
+  --color-shadow: rgba(28, 46, 36, 0.04);
+}
+
+/* Custom 테마 기본 구조 (JS에서 변수를 동적 변경함) */
+body.theme-custom {
+  --color-bg: #faf9f5;
+  --color-card-bg: #ffffff;
+  --color-text: #2d2d2d;
+  --color-text-muted: #666666;
+  --color-border: #e0e0e0;
+  --color-border-hover: #b0b0b0;
+  --color-primary: #b0242a;
+  --color-primary-hover: #d33e3f;
+  --color-primary-active: #e54b4b;
+  --color-shadow: rgba(0, 0, 0, 0.05);
+}
+
 /* 2. 전역 스타일 초기화 */
 * {
   box-sizing: border-box;
@@ -87,6 +149,26 @@ body.font-serif {
 
 body.font-sans {
   font-family: var(--font-sans);
+}
+
+body.font-ridi {
+  font-family: var(--font-ridi);
+}
+
+body.font-maru {
+  font-family: var(--font-maru);
+}
+
+body.font-kopub {
+  font-family: var(--font-kopub);
+}
+
+body.font-pretendard {
+  font-family: var(--font-pretendard);
+}
+
+body.font-nanumgothic {
+  font-family: var(--font-nanumgothic);
 }
 
 /* 스크롤바 디자인 */
@@ -178,6 +260,31 @@ body.font-sans {
   background-color: var(--color-primary);
   color: #ffffff;
   border-color: var(--color-primary);
+}
+
+/* 드롭다운 서체 셀렉트 박스 */
+.font-select {
+  padding: 0.35rem 1.8rem 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-card-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  outline: none;
+  font-family: var(--font-sans);
+  transition: var(--transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.8em;
+  font-weight: 500;
+}
+
+.font-select:hover {
+  border-color: var(--color-border-hover);
+  background-color: var(--color-bg);
 }
 
 .btn-text {
@@ -417,6 +524,54 @@ body.font-sans {
 .theme-swatch-dark {
   background-color: #121212;
   border-color: #333333;
+}
+.theme-swatch-sepia {
+  background-color: #f4ecd8;
+  border-color: #e3d5be;
+}
+.theme-swatch-green {
+  background-color: #e8f3ec;
+  border-color: #d0e3d6;
+}
+
+/* 커스텀 색상 피커 스타일 */
+.custom-color-picker {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  margin-left: 0.35rem;
+  padding-left: 0.35rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.color-picker-label {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: var(--transition-fast);
+}
+
+.color-picker-label:hover {
+  transform: scale(1.15);
+  border-color: var(--color-border-hover);
+}
+
+.color-picker-label input[type="color"] {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  top: 0;
+  left: 0;
 }
 
 /* 6. 소설 텍스트 렌더링 영역 */
