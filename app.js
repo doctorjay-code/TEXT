@@ -428,13 +428,27 @@ document.addEventListener('DOMContentLoaded', () => {
       loadBook(bookTitle).then(book => {
         if (!book) return;
         
+        const bookmarks = loadBookmarks();
+        const bookBookmarks = bookmarks[bookTitle] || [];
+        
         const cleanBook = {
           title: book.title,
-          chapters: book.chapters
+          chapters: book.chapters,
+          bookmarks: bookBookmarks
         };
         
-        const jsonStr = JSON.stringify(cleanBook, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const jsonStr = JSON.stringify(cleanBook);
+        
+        // 한글 깨짐을 방지하는 안전한 UTF-8 Base64 인코딩
+        const utf8Bytes = new TextEncoder().encode(jsonStr);
+        let binary = '';
+        const len = utf8Bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(utf8Bytes[i]);
+        }
+        const base64Str = btoa(binary);
+        
+        const blob = new Blob([base64Str], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
@@ -459,10 +473,34 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsText(file, 'utf-8');
     reader.onload = (event) => {
       try {
-        const bookData = JSON.parse(event.target.result);
+        const rawText = event.target.result.trim();
+        let jsonStr = '';
+        
+        // Base64 문자열인지 확인하여 디코딩 시도 (이전 평문 백업본 호환성 유지)
+        try {
+          const decodedBinary = atob(rawText);
+          const len = decodedBinary.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = decodedBinary.charCodeAt(i);
+          }
+          jsonStr = new TextDecoder().decode(bytes);
+        } catch (e) {
+          // 디코딩 실패 시 기존 평문 JSON 파일로 간주
+          jsonStr = rawText;
+        }
+        
+        const bookData = JSON.parse(jsonStr);
         
         if (bookData && bookData.title && bookData.chapters && Array.isArray(bookData.chapters)) {
           saveBook(bookData.title, bookData.chapters).then(() => {
+            // 북마크 정보 복원
+            if (bookData.bookmarks && Array.isArray(bookData.bookmarks)) {
+              const bookmarks = loadBookmarks();
+              bookmarks[bookData.title] = bookData.bookmarks;
+              saveBookmarks(bookmarks);
+            }
+            
             alert(`📥 [${bookData.title}] 책 백업본을 책장에 성공적으로 가져왔습니다!`);
             renderLibrary();
             switchToBook(bookData.title);
