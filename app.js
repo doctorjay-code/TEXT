@@ -523,12 +523,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const jsonStr = JSON.stringify(cleanBook);
         
-        // 한글 깨짐을 방지하는 안전한 UTF-8 Base64 인코딩
+        // 대용량 도서 대응 및 모바일 성능을 위한 청크 단위 Base64 인코딩
         const utf8Bytes = new TextEncoder().encode(jsonStr);
         let binary = '';
         const len = utf8Bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(utf8Bytes[i]);
+        const chunkSize = 16384;
+        for (let i = 0; i < len; i += chunkSize) {
+          const chunk = utf8Bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, chunk);
         }
         const base64Str = btoa(binary);
         
@@ -548,7 +550,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        
+        // 모바일 사파리에서 다운로드 처리가 끝나기 전에 URL이 파괴되어 생기는 오류 방지 (지연 실행)
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 3000);
       });
     } else if (e.target.closest('.lib-book-link')) {
       switchToBook(bookTitle);
@@ -676,10 +682,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookmarks = loadBookmarks();
     if (bookmarks[currentFileName] && bookmarks[currentFileName].includes(currentChapterIndex)) {
       btnBookmark.classList.add('active');
-      btnBookmark.style.borderColor = 'var(--color-primary)';
     } else {
       btnBookmark.classList.remove('active');
-      btnBookmark.style.borderColor = '';
     }
   };
 
@@ -697,13 +701,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (indexInArray === -1) {
       chapterList.push(currentChapterIndex);
       btnBookmark.classList.add('active');
-      btnBookmark.style.borderColor = 'var(--color-primary)';
-      alert(`🔖 [${chapters[currentChapterIndex].title}] 책갈피가 설정되었습니다.`);
     } else {
       chapterList.splice(indexInArray, 1);
       btnBookmark.classList.remove('active');
-      btnBookmark.style.borderColor = '';
-      alert(`🔖 [${chapters[currentChapterIndex].title}] 책갈피가 해제되었습니다.`);
     }
     
     saveBookmarks(bookmarks);

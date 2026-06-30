@@ -433,6 +433,12 @@ body.font-nanumgothic {
   background-color: var(--color-bg);
 }
 
+.btn-nav.active {
+  color: var(--color-primary);
+  font-weight: 600;
+  background-color: var(--color-border);
+}
+
 .icon-bookmark {
   margin-right: 4px;
 }
