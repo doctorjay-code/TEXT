@@ -280,11 +280,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       const activeLi = tocList.querySelector('li.active');
       if (!activeLi || !tocBody) return;
-      
-      const targetScroll = activeLi.offsetTop;
-      
+
+      // getBoundingClientRect로 tocBody 기준 실제 위치 계산 (offsetTop은 offsetParent 기준이라 오차 발생)
+      const liRect = activeLi.getBoundingClientRect();
+      const containerRect = tocBody.getBoundingClientRect();
+      const relativeTop = liRect.top - containerRect.top + tocBody.scrollTop;
+
+      // 현재 화가 목록 화면 중앙에 오도록 스크롤
+      const scrollTarget = relativeTop - tocBody.clientHeight / 2 + activeLi.clientHeight / 2;
+
       tocBody.scrollTo({
-        top: Math.max(0, targetScroll),
+        top: Math.max(0, scrollTarget),
         behavior: 'instant'
       });
     }, 120);
