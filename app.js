@@ -281,8 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const activeLi = tocList.querySelector('li.active');
       if (!activeLi || !tocBody) return;
       
-      const bookmarksHeight = tocBookmarksContainer ? tocBookmarksContainer.offsetHeight : 0;
-      const targetScroll = activeLi.offsetTop - bookmarksHeight;
+      const targetScroll = activeLi.offsetTop;
       
       tocBody.scrollTo({
         top: Math.max(0, targetScroll),
@@ -1212,8 +1211,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 목차 클릭 이벤트 위임
-  if (tocBody) {
-    tocBody.addEventListener('click', (e) => {
+  if (tocSidebar) {
+    tocSidebar.addEventListener('click', (e) => {
       e.preventDefault();
       const li = e.target.closest('li');
       if (li && li.dataset.index !== undefined) {
@@ -1225,8 +1224,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateTOCSelection() {
-    if (!tocBody) return;
-    const listItems = tocBody.querySelectorAll('li[data-index]');
+    if (!tocSidebar) return;
+    const listItems = tocSidebar.querySelectorAll('li[data-index]');
     listItems.forEach((li) => {
       const index = parseInt(li.dataset.index, 10);
       if (index === currentChapterIndex) {
