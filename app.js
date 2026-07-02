@@ -93,6 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const readingContent = document.getElementById('reading-content');
   const chapterTitleEl = document.getElementById('chapter-title');
   
+  const tocBody = document.getElementById('toc-body');
+  const tocBookmarksContainer = document.getElementById('toc-bookmarks');
   const tocList = document.getElementById('toc-list');
   const tocSidebar = document.getElementById('toc-sidebar');
   
@@ -101,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const progressBar = document.querySelector('.progress-fill');
   const btnBookmark = document.getElementById('btn-bookmark-top');
+  const floatingNavBar = document.getElementById('floating-nav-bar');
 
   // ==========================================================================
   // [3단계] 독서 편의성 설정 복원 및 제어 (localStorage 동기화)
@@ -273,12 +276,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // 목차(TOC) 사이드바 제어 및 검색 초기화
   const tocSearchInput = document.getElementById('toc-search-input');
   
+  const scrollToActiveChapter = () => {
+    setTimeout(() => {
+      const activeLi = tocList.querySelector('li.active');
+      if (!activeLi || !tocBody) return;
+      
+      const bookmarksHeight = tocBookmarksContainer ? tocBookmarksContainer.offsetHeight : 0;
+      const targetScroll = activeLi.offsetTop - bookmarksHeight;
+      
+      tocBody.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'instant'
+      });
+    }, 120);
+  };
+
   const openToc = () => {
     if (tocSearchInput) {
       tocSearchInput.value = '';
       renderChaptersTOC(''); // 전체 목차 복원
     }
     tocSidebar.classList.add('open');
+    scrollToActiveChapter();
+    if (floatingNavBar) {
+      floatingNavBar.classList.remove('active');
+    }
   };
   const closeToc = () => tocSidebar.classList.remove('open');
 
@@ -299,6 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const openLibrary = () => {
     renderLibrary();
     librarySidebar.classList.add('open');
+    if (floatingNavBar) {
+      floatingNavBar.classList.remove('active');
+    }
   };
   const closeLibrary = () => librarySidebar.classList.remove('open');
 
@@ -680,14 +705,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const updateBookmarkButtonState = () => {
     const bookmarks = loadBookmarks();
-    if (bookmarks[currentFileName] && bookmarks[currentFileName].includes(currentChapterIndex)) {
+    const isBookmarked = bookmarks[currentFileName] && bookmarks[currentFileName].includes(currentChapterIndex);
+    const btnBookmarkFloating = document.getElementById('btn-bookmark-floating');
+    
+    if (isBookmarked) {
       btnBookmark.classList.add('active');
+      if (btnBookmarkFloating) btnBookmarkFloating.classList.add('active');
     } else {
       btnBookmark.classList.remove('active');
+      if (btnBookmarkFloating) btnBookmarkFloating.classList.remove('active');
     }
   };
 
-  btnBookmark.addEventListener('click', () => {
+  const toggleBookmark = () => {
     if (!currentFileName) return;
     
     const bookmarks = loadBookmarks();
@@ -700,15 +730,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (indexInArray === -1) {
       chapterList.push(currentChapterIndex);
-      btnBookmark.classList.add('active');
     } else {
       chapterList.splice(indexInArray, 1);
-      btnBookmark.classList.remove('active');
     }
     
     saveBookmarks(bookmarks);
+    updateBookmarkButtonState();
     renderChaptersTOC();
-  });
+  };
+
+  btnBookmark.addEventListener('click', toggleBookmark);
+  const btnBookmarkFloating = document.getElementById('btn-bookmark-floating');
+  if (btnBookmarkFloating) {
+    btnBookmarkFloating.addEventListener('click', toggleBookmark);
+  }
 
   // 스크롤 저장 (책별 독립 기록)
   window.addEventListener('scroll', () => {
@@ -1126,23 +1161,35 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderChaptersTOC(filterQuery = '') {
     const bookmarks = loadBookmarks();
     const bookBookmarks = bookmarks[currentFileName] || [];
-    
-    let html = '';
     const q = filterQuery.toLowerCase().trim();
+    
+    // 책갈피 영역 초기화
+    tocBookmarksContainer.innerHTML = '';
     
     // 1. 검색어가 없을 때 최상단 책갈피 고정 섹션 노출
     if (!q && bookBookmarks.length > 0) {
-      html += `<li class="toc-section-header" style="padding: 0.6rem 1.5rem; font-size: 0.8rem; color: var(--color-primary); font-weight: bold; background-color: var(--color-bg); border-bottom: 1px solid var(--color-border); font-family: var(--font-sans); display: flex; align-items: center; gap: 4px;">📌 책갈피 한 화</li>`;
+      let bookmarksHtml = '';
+      bookmarksHtml += `<div class="toc-section-header" style="padding: 0.6rem 1.5rem; font-size: 0.8rem; color: var(--color-primary); font-weight: bold; background-color: var(--color-bg); border-bottom: 1px solid var(--color-border); font-family: var(--font-sans); display: flex; align-items: center; gap: 4px;">📌 책갈피 한 화</div>`;
+      bookmarksHtml += `<ul class="toc-list" style="padding: 0;">`;
       chapters.forEach((chapter, index) => {
         if (bookBookmarks.includes(index)) {
-          const isActive = index === currentChapterIndex ? 'active' : '';
-          html += `<li class="${isActive}" data-index="${index}"><a href="#">🔖 ${chapter.title}</a></li>`;
+          const isActiveClass = index === currentChapterIndex ? 'active' : '';
+          const classes = [isActiveClass, 'bookmarked'].filter(Boolean).join(' ');
+          bookmarksHtml += `<li class="${classes}" data-index="${index}"><a href="#">🔖 ${chapter.title}</a></li>`;
         }
       });
-      html += `<li class="toc-section-header" style="padding: 0.6rem 1.5rem; font-size: 0.8rem; color: var(--color-text-muted); font-weight: bold; background-color: var(--color-bg); border-bottom: 1px solid var(--color-border); border-top: 1px solid var(--color-border); font-family: var(--font-sans); display: flex; align-items: center; gap: 4px;">📖 전체 목차</li>`;
+      bookmarksHtml += `</ul>`;
+      tocBookmarksContainer.innerHTML = bookmarksHtml;
     }
     
     // 2. 전체 목록 (검색어가 있을 경우 필터링 적용)
+    let chaptersHtml = '';
+    
+    // 전체 목록 헤더 (검색어가 없고 북마크가 있을 때만 노출)
+    if (!q && bookBookmarks.length > 0) {
+      chaptersHtml += `<li class="toc-section-header" style="padding: 0.6rem 1.5rem; font-size: 0.8rem; color: var(--color-text-muted); font-weight: bold; background-color: var(--color-bg); border-bottom: 1px solid var(--color-border); font-family: var(--font-sans); display: flex; align-items: center; gap: 4px;">📖 전체 목차</li>`;
+    }
+    
     chapters.forEach((chapter, index) => {
       const hasBookmark = bookBookmarks.includes(index);
       
@@ -1155,27 +1202,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      const isActive = index === currentChapterIndex ? 'active' : '';
-      html += `<li class="${isActive}" data-index="${index}"><a href="#">${hasBookmark ? '🔖 ' : ''}${chapter.title}</a></li>`;
+      const isActiveClass = index === currentChapterIndex ? 'active' : '';
+      const isBookmarkedClass = hasBookmark ? 'bookmarked' : '';
+      const classes = [isActiveClass, isBookmarkedClass].filter(Boolean).join(' ');
+      chaptersHtml += `<li class="${classes}" data-index="${index}"><a href="#">${hasBookmark ? '🔖 ' : ''}${chapter.title}</a></li>`;
     });
     
-    tocList.innerHTML = html;
+    tocList.innerHTML = chaptersHtml;
   }
 
   // 목차 클릭 이벤트 위임
-  tocList.addEventListener('click', (e) => {
-    e.preventDefault();
-    const li = e.target.closest('li');
-    if (li && li.dataset.index !== undefined) {
-      const index = parseInt(li.dataset.index, 10);
-      displayChapter(index);
-      closeToc();
-    }
-  });
+  if (tocBody) {
+    tocBody.addEventListener('click', (e) => {
+      e.preventDefault();
+      const li = e.target.closest('li');
+      if (li && li.dataset.index !== undefined) {
+        const index = parseInt(li.dataset.index, 10);
+        displayChapter(index);
+        closeToc();
+      }
+    });
+  }
 
   function updateTOCSelection() {
-    const listItems = tocList.querySelectorAll('li');
-    listItems.forEach((li, index) => {
+    if (!tocBody) return;
+    const listItems = tocBody.querySelectorAll('li[data-index]');
+    listItems.forEach((li) => {
+      const index = parseInt(li.dataset.index, 10);
       if (index === currentChapterIndex) {
         li.classList.add('active');
       } else {
@@ -1211,4 +1264,38 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-next-chapter-top').addEventListener('click', moveToNextChapter);
   document.getElementById('btn-next-chapter-bottom').addEventListener('click', moveToNextChapter);
   
+  // 하단 플로팅 네비게이션 버튼 연동
+  const btnPrevFloating = document.getElementById('btn-prev-chapter-floating');
+  const btnNextFloating = document.getElementById('btn-next-chapter-floating');
+  const btnTocFloating = document.getElementById('btn-toc-floating');
+  
+  if (btnPrevFloating) btnPrevFloating.addEventListener('click', moveToPrevChapter);
+  if (btnNextFloating) btnNextFloating.addEventListener('click', moveToNextChapter);
+  if (btnTocFloating) btnTocFloating.addEventListener('click', openToc);
+
+  // 화면 클릭 시 하단 플로팅 네비게이션 토글
+  document.addEventListener('click', (e) => {
+    // 뷰어 모드가 활성화되어 있지 않으면 동작하지 않음
+    if (!viewerContainer.classList.contains('active')) return;
+    
+    // 클릭된 요소 또는 조상 요소가 대화식 UI 구성요소인지 확인
+    const isInteractive = e.target.closest('button, select, input, a, .settings-toolbar, .toc-sidebar, .floating-nav-bar');
+    
+    if (isInteractive) {
+      // 대화식 요소(버튼, 설정창, 사이드바 등)를 누른 경우 토글 무시
+      return;
+    }
+    
+    // 텍스트 선택 중인 경우(드래그) 토글 방지
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim() !== '') {
+      return;
+    }
+    
+    // 플로팅 바 토글
+    if (floatingNavBar) {
+      floatingNavBar.classList.toggle('active');
+    }
+  });
+
 });
