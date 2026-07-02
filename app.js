@@ -1200,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bookBookmarks.includes(index)) {
           const isActiveClass = index === currentChapterIndex ? 'active' : '';
           const classes = [isActiveClass, 'bookmarked'].filter(Boolean).join(' ');
-          bookmarksHtml += `<li class="${classes}" data-index="${index}"><a href="#">🔖 ${chapter.title}</a></li>`;
+          bookmarksHtml += `<li class="${classes}" data-index="${index}"><a>🔖 ${chapter.title}</a></li>`;
         }
       });
       bookmarksHtml += `</ul>`;
@@ -1230,17 +1230,51 @@ document.addEventListener('DOMContentLoaded', () => {
       const isActiveClass = index === currentChapterIndex ? 'active' : '';
       const isBookmarkedClass = hasBookmark ? 'bookmarked' : '';
       const classes = [isActiveClass, isBookmarkedClass].filter(Boolean).join(' ');
-      chaptersHtml += `<li class="${classes}" data-index="${index}"><a href="#">${hasBookmark ? '🔖 ' : ''}${chapter.title}</a></li>`;
+      chaptersHtml += `<li class="${classes}" data-index="${index}"><a>${hasBookmark ? '🔖 ' : ''}${chapter.title}</a></li>`;
     });
     
     tocList.innerHTML = chaptersHtml;
   }
 
-  // 목차 클릭 이벤트 위임
+  // 목차 클릭/터치 이벤트 위임 (모바일 iOS/Chrome 정확도 보강)
   if (tocSidebar) {
+    let _tocTouchTargetIndex = null;
+    let _tocTouchStartY = 0;
+
+    // 터치 시작 시점에 정확한 대상 li와 Y좌표를 미리 기록
+    tocSidebar.addEventListener('touchstart', (e) => {
+      const li = e.target.closest('li[data-index]');
+      _tocTouchTargetIndex = (li && li.dataset.index !== undefined) ? parseInt(li.dataset.index, 10) : null;
+      _tocTouchStartY = e.touches[0] ? e.touches[0].clientY : 0;
+    }, { passive: true });
+
+    // 터치 취소 (스크롤 감지되면 시스템이 취소 발생시킵)
+    tocSidebar.addEventListener('touchcancel', () => {
+      _tocTouchTargetIndex = null;
+    }, { passive: true });
+
+    // 터치 종료 시: Y 이동거리 10px 미만일 때만 화 전환 (스크롤 중 오발 방지)
+    tocSidebar.addEventListener('touchend', (e) => {
+      if (_tocTouchTargetIndex !== null) {
+        const endY = e.changedTouches[0] ? e.changedTouches[0].clientY : _tocTouchStartY;
+        const moved = Math.abs(endY - _tocTouchStartY);
+        const index = _tocTouchTargetIndex;
+        _tocTouchTargetIndex = null;
+
+        if (moved < 10) {
+          e.preventDefault();
+          displayChapter(index);
+          closeToc();
+        }
+      }
+    }, { passive: false });
+
+    // 마우스 클릭 (PC 호환 유지)
     tocSidebar.addEventListener('click', (e) => {
+      // 터치 이벤트로 이미 처리된 경우 중복 실행 방지
+      if (e.detail === 0) return; // touch-generated synthetic click은 detail=0
       e.preventDefault();
-      const li = e.target.closest('li');
+      const li = e.target.closest('li[data-index]');
       if (li && li.dataset.index !== undefined) {
         const index = parseInt(li.dataset.index, 10);
         displayChapter(index);
