@@ -1252,12 +1252,14 @@ document.addEventListener('DOMContentLoaded', () => {
       _tocTouchStartY = e.touches[0] ? e.touches[0].clientY : 0;
     }, { passive: true });
 
-    // 터치 취소 (스크롤 감지되면 시스템이 취소 발생시킵)
+    // 터치 취소 (iOS가 스크롤 감지 시 발생)
     tocSidebar.addEventListener('touchcancel', () => {
       _tocTouchTargetIndex = null;
     }, { passive: true });
 
-    // 터치 종료 시: Y 이동거리 10px 미만일 때만 화 전환 (스크롤 중 오발 방지)
+    // 터치 종료: 항상 preventDefault()로 합성 click 차단
+    // moved < 10px = 탭 → 해당 화 전환
+    // moved >= 10px = 스크롤 → 화 전환 없음 (click도 차단되어 오발 없음)
     tocSidebar.addEventListener('touchend', (e) => {
       if (_tocTouchTargetIndex !== null) {
         const endY = e.changedTouches[0] ? e.changedTouches[0].clientY : _tocTouchStartY;
@@ -1265,25 +1267,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const index = _tocTouchTargetIndex;
         _tocTouchTargetIndex = null;
 
+        // 스크롤이든 탭이든 항상 합성 click 차단
+        e.preventDefault();
+
         if (moved < 10) {
-          e.preventDefault();
+          // 탭: 해당 화 전환
           displayChapter(index);
           closeToc();
         }
+        // moved >= 10: 스크롤이었음 → 화 전환 없이 종료
       }
     }, { passive: false });
 
-    // 마우스 클릭 (PC 호환 유지)
+    // 마우스 클릭 전용 (PC 호환) — 터치 기기에서는 touchend가 preventDefault로 click을 막음
     tocSidebar.addEventListener('click', (e) => {
-      // 터치 이벤트로 이미 처리된 경우 중복 실행 방지
-      if (e.detail === 0) return; // touch-generated synthetic click은 detail=0
       e.preventDefault();
       const li = e.target.closest('li[data-index]');
-      if (li && li.dataset.index !== undefined) {
-        const index = parseInt(li.dataset.index, 10);
-        displayChapter(index);
-        closeToc();
-      }
+      if (!li) return;
+      const index = parseInt(li.dataset.index, 10);
+      displayChapter(index);
+      closeToc();
     });
   }
 
