@@ -277,22 +277,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const tocSearchInput = document.getElementById('toc-search-input');
   
   const scrollToActiveChapter = () => {
-    // 사이드바 열림 애니메이션(0.3s)이 끝난 뒤에 계산해야 getBoundingClientRect가 정확함.
-    // 대신 offsetTop 누산 방식은 애니메이션과 무관하게 즉시 정확하므로 delay 없이 실행.
-    const activeLi = tocList.querySelector('li.active');
-    if (!activeLi || !tocBody) return;
+    // rAF 2회: 브라우저가 visibility:hidden→visible 및 레이아웃을 완전히 처리한 뒤 실행
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const activeLi = tocList.querySelector('li.active');
+        if (!activeLi || !tocBody) return;
 
-    // li에서 tocBody까지 DOM을 직접 타고 올라가며 offsetTop을 누산
-    let top = 0;
-    let el = activeLi;
-    while (el && el !== tocBody) {
-      top += el.offsetTop;
-      el = el.offsetParent;
-    }
-
-    // 현재 화가 목록 화면 중앙에 오도록 스크롤
-    const scrollTarget = top - tocBody.clientHeight / 2 + activeLi.offsetHeight / 2;
-    tocBody.scrollTop = Math.max(0, scrollTarget);
+        // scrollIntoView는 브라우저 네이티브로 가장 가까운 scrollable 조상(toc-body)을 정확히 스크롤
+        // window도 함께 스크롤될 수 있으므로 본문 스크롤 위치를 미리 저장하고 원복
+        const savedScrollY = window.scrollY;
+        activeLi.scrollIntoView({ block: 'center', behavior: 'instant' });
+        if (window.scrollY !== savedScrollY) {
+          window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
+      });
+    });
   };
 
   const openToc = () => {
