@@ -277,21 +277,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const tocSearchInput = document.getElementById('toc-search-input');
   
   const scrollToActiveChapter = () => {
-    // rAF 2회: 브라우저가 visibility:hidden→visible 및 레이아웃을 완전히 처리한 뒤 실행
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const activeLi = tocList.querySelector('li.active');
-        if (!activeLi || !tocBody) return;
+    // rAF/setTimeout 없이 즉시 동기 실행:
+    // rAF 딜레이가 있으면 유저가 이미 스크롤 중일 때 scrollIntoView가 끼어들어 위치가 튀는 버그 발생.
+    // tocBody는 position:relative → li.offsetParent === tocBody → li.offsetTop이 곧 tocBody 기준 정확한 위치.
+    const activeLi = tocList.querySelector('li.active');
+    if (!activeLi || !tocBody) return;
 
-        // scrollIntoView는 브라우저 네이티브로 가장 가까운 scrollable 조상(toc-body)을 정확히 스크롤
-        // window도 함께 스크롤될 수 있으므로 본문 스크롤 위치를 미리 저장하고 원복
-        const savedScrollY = window.scrollY;
-        activeLi.scrollIntoView({ block: 'center', behavior: 'instant' });
-        if (window.scrollY !== savedScrollY) {
-          window.scrollTo({ top: savedScrollY, behavior: 'instant' });
-        }
-      });
-    });
+    const scrollTarget = activeLi.offsetTop - tocBody.clientHeight / 2 + activeLi.offsetHeight / 2;
+    tocBody.scrollTop = Math.max(0, scrollTarget);
   };
 
   const openToc = () => {
