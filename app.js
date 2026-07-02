@@ -436,7 +436,20 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFileName = book.title;
         localStorage.setItem('reader_active_book_title', currentFileName);
         
-        currentChapterIndex = parseInt(localStorage.getItem(`reader_current_chapter_${currentFileName}`) || '0', 10);
+        // 책갈피 데이터 확인
+        const bookmarks = loadBookmarks();
+        const bookBookmarks = bookmarks[currentFileName] || [];
+
+        const savedChapter = localStorage.getItem(`reader_current_chapter_${currentFileName}`);
+        if (savedChapter !== null) {
+          currentChapterIndex = parseInt(savedChapter, 10);
+        } else if (bookBookmarks.length > 0) {
+          // 저장된 읽기 위치가 없고 책갈피가 존재하면, 책갈피 중 가장 마지막 화(가장 큰 인덱스)를 엽니다.
+          currentChapterIndex = Math.max(...bookBookmarks);
+        } else {
+          currentChapterIndex = 0;
+        }
+        
         if (currentChapterIndex >= chapters.length) currentChapterIndex = 0;
         
         uploadContainer.classList.remove('active');
@@ -568,9 +581,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = new Blob([wrappedJsonStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
+        const now = new Date();
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const dateStr = `${yy}${mm}${dd}_${hh}${min}`;
+
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${bookTitle}_backup.json`;
+        a.download = `${bookTitle}_${dateStr}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -633,6 +654,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (bookData && bookData.title && bookData.chapters && Array.isArray(bookData.chapters)) {
           saveBook(bookData.title, bookData.chapters).then(() => {
+            // 새 백업을 가져올 때는 이전의 기기 내 읽기 진도와 스크롤 위치를 초기화하여
+            // 백업 파일 내 책갈피 기준(가장 마지막 책갈피 화)으로 열릴 수 있도록 유도합니다.
+            localStorage.removeItem(`reader_current_chapter_${bookData.title}`);
+            localStorage.removeItem(`reader_scroll_ratio_${bookData.title}`);
+
             // 북마크 정보 복원
             if (bookData.bookmarks && Array.isArray(bookData.bookmarks)) {
               const bookmarks = loadBookmarks();
