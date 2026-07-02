@@ -277,14 +277,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const tocSearchInput = document.getElementById('toc-search-input');
   
   const scrollToActiveChapter = () => {
-    // rAF/setTimeout 없이 즉시 동기 실행:
-    // rAF 딜레이가 있으면 유저가 이미 스크롤 중일 때 scrollIntoView가 끼어들어 위치가 튀는 버그 발생.
-    // tocBody는 position:relative → li.offsetParent === tocBody → li.offsetTop이 곧 tocBody 기준 정확한 위치.
-    const activeLi = tocList.querySelector('li.active');
-    if (!activeLi || !tocBody) return;
+    // 사이드바가 열리고 레이아웃(높이)이 계산될 수 있도록 50ms 대기
+    setTimeout(() => {
+      const activeLi = tocList.querySelector('li.active');
+      if (!activeLi || !tocBody) return;
 
-    const scrollTarget = activeLi.offsetTop - tocBody.clientHeight / 2 + activeLi.offsetHeight / 2;
-    tocBody.scrollTop = Math.max(0, scrollTarget);
+      const containerHeight = tocBody.clientHeight || 500; // 높이가 0으로 잡힐 경우 대비 기본값 지정
+      const scrollTarget = activeLi.offsetTop - containerHeight / 2 + activeLi.offsetHeight / 2;
+      tocBody.scrollTop = Math.max(0, scrollTarget);
+    }, 50);
   };
 
   const openToc = () => {
@@ -1233,53 +1234,16 @@ document.addEventListener('DOMContentLoaded', () => {
     tocList.innerHTML = chaptersHtml;
   }
 
-  // 목차 클릭/터치 이벤트 위임 (모바일 iOS/Chrome 정확도 보강)
+  // 목차 클릭 이벤트 위임 (간단하고 표준적인 click 이벤트만 사용)
   if (tocSidebar) {
-    let _tocTouchTargetIndex = null;
-    let _tocTouchStartY = 0;
-
-    // 터치 시작 시점에 정확한 대상 li와 Y좌표를 미리 기록
-    tocSidebar.addEventListener('touchstart', (e) => {
-      const li = e.target.closest('li[data-index]');
-      _tocTouchTargetIndex = (li && li.dataset.index !== undefined) ? parseInt(li.dataset.index, 10) : null;
-      _tocTouchStartY = e.touches[0] ? e.touches[0].clientY : 0;
-    }, { passive: true });
-
-    // 터치 취소 (iOS가 스크롤 감지 시 발생)
-    tocSidebar.addEventListener('touchcancel', () => {
-      _tocTouchTargetIndex = null;
-    }, { passive: true });
-
-    // 터치 종료: 항상 preventDefault()로 합성 click 차단
-    // moved < 10px = 탭 → 해당 화 전환
-    // moved >= 10px = 스크롤 → 화 전환 없음 (click도 차단되어 오발 없음)
-    tocSidebar.addEventListener('touchend', (e) => {
-      if (_tocTouchTargetIndex !== null) {
-        const endY = e.changedTouches[0] ? e.changedTouches[0].clientY : _tocTouchStartY;
-        const moved = Math.abs(endY - _tocTouchStartY);
-        const index = _tocTouchTargetIndex;
-        _tocTouchTargetIndex = null;
-
-        // 스크롤이든 탭이든 항상 합성 click 차단
-        e.preventDefault();
-
-        if (moved < 10) {
-          // 탭: 해당 화 전환
-          displayChapter(index);
-          closeToc();
-        }
-        // moved >= 10: 스크롤이었음 → 화 전환 없이 종료
-      }
-    }, { passive: false });
-
-    // 마우스 클릭 전용 (PC 호환) — 터치 기기에서는 touchend가 preventDefault로 click을 막음
     tocSidebar.addEventListener('click', (e) => {
-      e.preventDefault();
       const li = e.target.closest('li[data-index]');
-      if (!li) return;
-      const index = parseInt(li.dataset.index, 10);
-      displayChapter(index);
-      closeToc();
+      if (li && li.dataset.index !== undefined) {
+        e.preventDefault();
+        const index = parseInt(li.dataset.index, 10);
+        displayChapter(index);
+        closeToc();
+      }
     });
   }
 
