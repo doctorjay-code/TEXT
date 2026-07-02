@@ -277,23 +277,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const tocSearchInput = document.getElementById('toc-search-input');
   
   const scrollToActiveChapter = () => {
-    setTimeout(() => {
-      const activeLi = tocList.querySelector('li.active');
-      if (!activeLi || !tocBody) return;
+    // 사이드바 열림 애니메이션(0.3s)이 끝난 뒤에 계산해야 getBoundingClientRect가 정확함.
+    // 대신 offsetTop 누산 방식은 애니메이션과 무관하게 즉시 정확하므로 delay 없이 실행.
+    const activeLi = tocList.querySelector('li.active');
+    if (!activeLi || !tocBody) return;
 
-      // getBoundingClientRect로 tocBody 기준 실제 위치 계산 (offsetTop은 offsetParent 기준이라 오차 발생)
-      const liRect = activeLi.getBoundingClientRect();
-      const containerRect = tocBody.getBoundingClientRect();
-      const relativeTop = liRect.top - containerRect.top + tocBody.scrollTop;
+    // li에서 tocBody까지 DOM을 직접 타고 올라가며 offsetTop을 누산
+    let top = 0;
+    let el = activeLi;
+    while (el && el !== tocBody) {
+      top += el.offsetTop;
+      el = el.offsetParent;
+    }
 
-      // 현재 화가 목록 화면 중앙에 오도록 스크롤
-      const scrollTarget = relativeTop - tocBody.clientHeight / 2 + activeLi.clientHeight / 2;
-
-      tocBody.scrollTo({
-        top: Math.max(0, scrollTarget),
-        behavior: 'instant'
-      });
-    }, 120);
+    // 현재 화가 목록 화면 중앙에 오도록 스크롤
+    const scrollTarget = top - tocBody.clientHeight / 2 + activeLi.offsetHeight / 2;
+    tocBody.scrollTop = Math.max(0, scrollTarget);
   };
 
   const openToc = () => {
