@@ -21,15 +21,17 @@
       <div class="upload-box">
         <div class="upload-icon">📖</div>
         <h2>TXT 소설 파일을 책처럼 편하게 읽어보세요</h2>
-        <p>소설 또는 문서 파일을 이곳에 드래그하여 놓거나 파일을 선택하세요.</p>
+        <p>화별 TXT가 들어있는 폴더를 선택하거나, 백업(.json)을 가져오세요.</p>
         <div class="upload-buttons" style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
-          <label for="file-input" class="btn btn-primary btn-upload">TXT 파일 선택</label>
+          <!-- 단일 TXT 선택: 현재 미사용이라 숨김 (코드는 유지, 필요시 display만 복구) -->
+          <label for="file-input" class="btn btn-primary btn-upload" style="display: none;">TXT 파일 선택</label>
           <input type="file" id="file-input" accept=".txt" style="display: none;">
           
-          <label for="folder-input" class="btn btn-upload">TXT 폴더 선택 (단발성)</label>
+          <label for="folder-input" class="btn btn-primary btn-upload">TXT 폴더 선택</label>
           <input type="file" id="folder-input" webkitdirectory directory multiple style="display: none;">
 
-          <button id="btn-sync-folder" class="btn btn-upload" style="background-color: var(--color-primary-active); color: white; border-color: var(--color-primary-active); font-weight: 600; box-shadow: 0 4px 10px rgba(229, 75, 75, 0.2);">
+          <!-- 실시간 동기화: 현재 미사용이라 숨김 (코드는 유지) -->
+          <button id="btn-sync-folder" class="btn btn-upload" style="display: none; background-color: var(--color-primary-active); color: white; border-color: var(--color-primary-active); font-weight: 600; box-shadow: 0 4px 10px rgba(229, 75, 75, 0.2);">
             🔄 실시간 동기화 폴더 연동 (권장)
           </button>
 
@@ -37,6 +39,10 @@
             📥 백업 가져오기 (.json)
           </label>
           <input type="file" id="import-file-input-main" accept=".json" style="display: none;">
+
+          <button id="btn-library-main" class="btn btn-upload" style="cursor: pointer;">
+            📚 내 책장
+          </button>
         </div>
         <span class="file-hint">오프라인으로 동작하며, 어떤 데이터도 서버로 전송되지 않습니다.</span>
       </div>

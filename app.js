@@ -276,23 +276,58 @@ document.addEventListener('DOMContentLoaded', () => {
   // 목차(TOC) 사이드바 제어 및 검색 초기화
   const tocSearchInput = document.getElementById('toc-search-input');
   
-  const scrollToActiveChapter = () => {
-    // 사이드바가 열리고 레이아웃(높이)이 계산될 수 있도록 50ms 대기
-    setTimeout(() => {
-      const activeLi = tocList.querySelector('li.active');
-      if (!activeLi || !tocBody) return;
+  // 탭/스크롤 구분용 상태 (모바일에서 쓸어 넘긴 뒤 손 뗀 자리 오선택 방지)
+  let tocTouchStartX = 0;
+  let tocTouchStartY = 0;
+  let tocSuppressClick = false;
 
-      const containerHeight = tocBody.clientHeight || 500; // 높이가 0으로 잡힐 경우 대비 기본값 지정
-      const scrollTarget = activeLi.offsetTop - containerHeight / 2 + activeLi.offsetHeight / 2;
-      tocBody.scrollTop = Math.max(0, scrollTarget);
-    }, 50);
+  const markTocTouchStart = (e) => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    tocTouchStartX = t.clientX;
+    tocTouchStartY = t.clientY;
+    tocSuppressClick = false;
+  };
+  const markTocTouchMove = (e) => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    if (Math.abs(t.clientX - tocTouchStartX) > 10 || Math.abs(t.clientY - tocTouchStartY) > 10) {
+      tocSuppressClick = true;
+    }
+  };
+  if (tocBody) {
+    tocBody.addEventListener('touchstart', markTocTouchStart, { passive: true });
+    tocBody.addEventListener('touchmove', markTocTouchMove, { passive: true });
+  }
+  if (tocBookmarksContainer) {
+    tocBookmarksContainer.addEventListener('touchstart', markTocTouchStart, { passive: true });
+    tocBookmarksContainer.addEventListener('touchmove', markTocTouchMove, { passive: true });
+  }
+
+  const scrollToActiveChapter = () => {
+    // 패널이 열린 뒤 레이아웃이 잡히면 현재 화를 가운데로 (수동 offset 계산 대신 사용)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const activeLi = tocList.querySelector('li.active');
+        if (!activeLi) return;
+        try {
+          activeLi.scrollIntoView({ block: 'center' });
+        } catch (err) {
+          if (tocBody) tocBody.scrollTop = Math.max(0, activeLi.offsetTop - tocBody.clientHeight / 2);
+        }
+      }, 80);
+    });
   };
 
   const openToc = () => {
-    if (tocSearchInput) {
+    // 검색 중이던 경우에만 전체 목록 복원 (매번 재렌더로 인한 점프 방지)
+    if (tocSearchInput && tocSearchInput.value) {
       tocSearchInput.value = '';
-      renderChaptersTOC(''); // 전체 목차 복원
+      renderChaptersTOC('');
+    } else {
+      updateTOCSelection();
     }
+    tocSuppressClick = false;
     tocSidebar.classList.add('open');
     scrollToActiveChapter();
     if (floatingNavBar) {
@@ -306,11 +341,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-toc-close').addEventListener('click', closeToc);
   document.getElementById('toc-backdrop').addEventListener('click', closeToc);
 
-  // 실시간 화 검색 입력 동기화
+  // 실시간 화 검색 입력 동기화 (디바운스로 수백 화 재렌더 버벅임 완화)
+  let tocSearchTimer = null;
   if (tocSearchInput) {
     tocSearchInput.addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase().trim();
-      renderChaptersTOC(query);
+      if (tocSearchTimer) clearTimeout(tocSearchTimer);
+      tocSearchTimer = setTimeout(() => {
+        const query = e.target.value.toLowerCase().trim();
+        renderChaptersTOC(query);
+      }, 150);
     });
   }
 
@@ -325,6 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeLibrary = () => librarySidebar.classList.remove('open');
 
   document.getElementById('btn-library').addEventListener('click', openLibrary);
+  const btnLibraryMain = document.getElementById('btn-library-main');
+  if (btnLibraryMain) btnLibraryMain.addEventListener('click', openLibrary);
   document.getElementById('btn-library-close').addEventListener('click', closeLibrary);
   document.getElementById('library-backdrop').addEventListener('click', closeLibrary);
 
@@ -1234,9 +1275,13 @@ document.addEventListener('DOMContentLoaded', () => {
     tocList.innerHTML = chaptersHtml;
   }
 
-  // 목차 클릭 이벤트 위임 (간단하고 표준적인 click 이벤트만 사용)
+  // 목차 클릭 이벤트 위임 (스크롤 직후 click 오발동 무시)
   if (tocSidebar) {
     tocSidebar.addEventListener('click', (e) => {
+      if (tocSuppressClick) {
+        tocSuppressClick = false;
+        return;
+      }
       const li = e.target.closest('li[data-index]');
       if (li && li.dataset.index !== undefined) {
         e.preventDefault();
