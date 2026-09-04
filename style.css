@@ -1001,3 +1001,180 @@ body.font-nanumgothic {
   margin: 0;
 }
 
+/* ==========================================================================
+   보안 인증 모달 & 서재 전환 스타일
+   ========================================================================== */
+.auth-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  box-sizing: border-box;
+}
+
+.auth-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.auth-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 380px;
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+  box-sizing: border-box;
+}
+
+.auth-modal-overlay.active .auth-card {
+  transform: scale(1);
+}
+
+.auth-icon {
+  font-size: 44px;
+  margin-bottom: 12px;
+}
+
+.auth-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 6px;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin-bottom: 24px;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.auth-input:focus {
+  border-color: var(--color-primary, #e54b4b);
+}
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--color-primary, #e54b4b);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(229, 75, 75, 0.3);
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.auth-submit-btn:hover {
+  opacity: 0.92;
+}
+
+.auth-submit-btn:active {
+  transform: scale(0.98);
+}
+
+.auth-submit-btn:disabled {
+  background: #94A3B8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.auth-error-msg {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #EF4444;
+}
+
+.auth-lockout-timer {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #DC2626;
+  background: #FEE2E2;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+/* 현재 서재 표시 뱃지 및 잠금 버튼 */
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+.badge-library-1 {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563EB;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.badge-library-2 {
+  background: rgba(168, 85, 247, 0.1);
+  color: #9333EA;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.btn-lock-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-sub);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-lock-auth:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+

@@ -3,8 +3,45 @@
 // ==========================================================================
 
 // --- IndexedDB 다중 도서 보존 헬퍼 ---
-const DB_NAME = 'TXTReaderDB';
+let DB_NAME = 'TXTReaderDB';
 const STORE_NAME = 'books';
+
+function setDatabaseName(name) {
+  DB_NAME = name;
+}
+
+// --- 프로필 기반 격리 스토리지 도우미 ---
+let activeProfile = null;
+
+const appStorage = {
+  getPrefix() {
+    return activeProfile ? activeProfile.storagePrefix : 'p1_';
+  },
+  resolveKey(key) {
+    return this.getPrefix() + key;
+  },
+  getItem(key) {
+    const prefixedKey = this.resolveKey(key);
+    const value = localStorage.getItem(prefixedKey);
+    if (value !== null) return value;
+    // 서재 1인 경우 기존 데이터(접두사 없는 원본 키)와 하위 호환 유지
+    if (activeProfile && activeProfile.id === 'profile1') {
+      return localStorage.getItem(key);
+    }
+    return null;
+  },
+  setItem(key, value) {
+    const prefixedKey = this.resolveKey(key);
+    localStorage.setItem(prefixedKey, value);
+  },
+  removeItem(key) {
+    const prefixedKey = this.resolveKey(key);
+    localStorage.removeItem(prefixedKey);
+    if (activeProfile && activeProfile.id === 'profile1') {
+      localStorage.removeItem(key);
+    }
+  }
+};
 
 function initDB() {
   return new Promise((resolve, reject) => {
@@ -110,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================================================
 
   const restoreSettings = () => {
-    const savedSize = localStorage.getItem('reader_font_size');
+    const savedSize = appStorage.getItem('reader_font_size');
     if (savedSize) {
       currentSize = parseInt(savedSize, 10);
       updateFontSize(currentSize);
@@ -118,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateFontSize(16);
     }
 
-    const savedFont = localStorage.getItem('reader_font_family') || 'font-serif';
+    const savedFont = appStorage.getItem('reader_font_family') || 'font-serif';
     const selectFont = document.getElementById('select-font-family');
     
     body.classList.remove('font-serif', 'font-sans', 'font-ridi', 'font-maru', 'font-kopub', 'font-pretendard', 'font-nanumgothic');
@@ -127,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       selectFont.value = savedFont;
     }
 
-    const savedTheme = localStorage.getItem('reader_theme') || 'theme-cream';
+    const savedTheme = appStorage.getItem('reader_theme') || 'theme-cream';
     body.classList.remove('theme-cream', 'theme-white', 'theme-dark', 'theme-sepia', 'theme-green', 'theme-custom');
     body.classList.add(savedTheme);
     
@@ -145,8 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 커스텀 색상 테마 불러오기
-    const customBg = localStorage.getItem('reader_custom_bg') || '#faf9f5';
-    const customText = localStorage.getItem('reader_custom_text') || '#2d2d2d';
+    const customBg = appStorage.getItem('reader_custom_bg') || '#faf9f5';
+    const customText = appStorage.getItem('reader_custom_text') || '#2d2d2d';
     const pickerBg = document.getElementById('picker-bg');
     const pickerText = document.getElementById('picker-text');
     if (pickerBg) pickerBg.value = customBg;
@@ -163,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentSize = size;
     sizeVal.textContent = `${currentSize}px`;
     readingContent.style.fontSize = `${currentSize}px`;
-    localStorage.setItem('reader_font_size', size.toString());
+    appStorage.setItem('reader_font_size', size.toString());
   };
 
   document.getElementById('btn-size-dec').addEventListener('click', () => {
@@ -184,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const selectedFont = e.target.value;
       body.classList.remove('font-serif', 'font-sans', 'font-ridi', 'font-maru', 'font-kopub', 'font-pretendard', 'font-nanumgothic');
       body.classList.add(selectedFont);
-      localStorage.setItem('reader_font_family', selectedFont);
+      appStorage.setItem('reader_font_family', selectedFont);
     });
   }
 
@@ -244,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.querySelectorAll('.btn-theme').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        localStorage.setItem('reader_theme', themeClass);
+        appStorage.setItem('reader_theme', themeClass);
       });
     }
   });
@@ -262,9 +299,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-theme').forEach(b => b.classList.remove('active'));
     applyCustomThemeColors(bgColor, textColor);
     
-    localStorage.setItem('reader_theme', 'theme-custom');
-    localStorage.setItem('reader_custom_bg', bgColor);
-    localStorage.setItem('reader_custom_text', textColor);
+    appStorage.setItem('reader_theme', 'theme-custom');
+    appStorage.setItem('reader_custom_bg', bgColor);
+    appStorage.setItem('reader_custom_text', textColor);
   };
 
   if (pickerBg && pickerText) {
@@ -374,22 +411,54 @@ document.addEventListener('DOMContentLoaded', () => {
   // [4단계] 네비게이션 및 책갈피/오프라인 무-업로드 이어읽기 구현
   // ==========================================================================
 
-  // 프로그램 시작 시 다중 도서 자동 로드 시도
-  restoreSettings();
-  
-  const savedActiveBook = localStorage.getItem('reader_active_book_title');
-  
-  if (savedActiveBook) {
-    switchToBook(savedActiveBook);
-  } else {
-    loadAllBooks().then(allBooks => {
-      if (allBooks && allBooks.length > 0) {
-        switchToBook(allBooks[0].title);
-      } else {
-        uploadContainer.classList.add('active');
-        viewerContainer.classList.remove('active');
-      }
+  // 서재 잠금 버튼 연동
+  const btnLockMain = document.getElementById('btn-lock-main');
+  const btnLockViewer = document.getElementById('btn-lock-viewer');
+  if (btnLockMain) btnLockMain.addEventListener('click', () => window.TextReaderAuth && window.TextReaderAuth.logout());
+  if (btnLockViewer) btnLockViewer.addEventListener('click', () => window.TextReaderAuth && window.TextReaderAuth.logout());
+
+  function updateProfileUI(profile) {
+    // 서재 명칭(서재 1, 서재 2)은 보안 및 프라이버시를 위해 화면에 노출하지 않음
+  }
+
+  function initReaderSession(profile) {
+    activeProfile = profile;
+    setDatabaseName(profile.dbName);
+    updateProfileUI(profile);
+
+    // 프로그램 시작 시 다중 도서 자동 로드 시도
+    restoreSettings();
+    
+    const savedActiveBook = appStorage.getItem('reader_active_book_title');
+    
+    if (savedActiveBook) {
+      switchToBook(savedActiveBook);
+    } else {
+      loadAllBooks().then(allBooks => {
+        if (allBooks && allBooks.length > 0) {
+          switchToBook(allBooks[0].title);
+        } else {
+          uploadContainer.classList.add('active');
+          viewerContainer.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  // 인증 시스템 초기화 및 세션 연결
+  if (window.TextReaderAuth) {
+    window.TextReaderAuth.init((profile) => {
+      initReaderSession(profile);
     });
+  } else {
+    const fallbackProfile = (window.AUTH_PROFILES && window.AUTH_PROFILES.profile1) || {
+      id: 'profile1',
+      name: '서재 1',
+      badgeClass: 'badge-library-1',
+      dbName: 'TXTReaderDB',
+      storagePrefix: 'p1_'
+    };
+    initReaderSession(fallbackProfile);
   }
 
   // File System Access API용 디렉토리 읽기 권한 검증 및 요청 함수
@@ -473,13 +542,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chapters = book.chapters;
         currentFileName = book.title;
-        localStorage.setItem('reader_active_book_title', currentFileName);
+        appStorage.setItem('reader_active_book_title', currentFileName);
         
         // 책갈피 데이터 확인
         const bookmarks = loadBookmarks();
         const bookBookmarks = bookmarks[currentFileName] || [];
 
-        const savedChapter = localStorage.getItem(`reader_current_chapter_${currentFileName}`);
+        const savedChapter = appStorage.getItem(`reader_current_chapter_${currentFileName}`);
         if (savedChapter !== null) {
           currentChapterIndex = parseInt(savedChapter, 10);
         } else if (bookBookmarks.length > 0) {
@@ -548,8 +617,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.classList.contains('btn-delete-book')) {
       if (confirm(`책장본 '[${bookTitle}]'을(를) 삭제하시겠습니까?\n(읽던 위치와 설정 데이터가 모두 지워집니다.)`)) {
         deleteBook(bookTitle).then(() => {
-          localStorage.removeItem(`reader_current_chapter_${bookTitle}`);
-          localStorage.removeItem(`reader_scroll_ratio_${bookTitle}`);
+          appStorage.removeItem(`reader_current_chapter_${bookTitle}`);
+          appStorage.removeItem(`reader_scroll_ratio_${bookTitle}`);
           
           const bookmarks = loadBookmarks();
           delete bookmarks[bookTitle];
@@ -560,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (remainingBooks.length > 0) {
                 switchToBook(remainingBooks[0].title);
               } else {
-                localStorage.removeItem('reader_active_book_title');
+                appStorage.removeItem('reader_active_book_title');
                 currentFileName = '';
                 chapters = [];
                 currentChapterIndex = 0;
@@ -583,11 +652,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookBookmarks = bookmarks[bookTitle] || [];
         
         const readerSettings = {
-          theme: localStorage.getItem('reader_theme') || 'theme-cream',
-          fontFamily: localStorage.getItem('reader_font_family') || 'font-serif',
-          fontSize: localStorage.getItem('reader_font_size') || '16',
-          customBg: localStorage.getItem('reader_custom_bg') || '#faf9f5',
-          customText: localStorage.getItem('reader_custom_text') || '#2d2d2d'
+          theme: appStorage.getItem('reader_theme') || 'theme-cream',
+          fontFamily: appStorage.getItem('reader_font_family') || 'font-serif',
+          fontSize: appStorage.getItem('reader_font_size') || '16',
+          customBg: appStorage.getItem('reader_custom_bg') || '#faf9f5',
+          customText: appStorage.getItem('reader_custom_text') || '#2d2d2d'
         };
 
         const cleanBook = {
@@ -695,8 +764,8 @@ document.addEventListener('DOMContentLoaded', () => {
           saveBook(bookData.title, bookData.chapters).then(() => {
             // 새 백업을 가져올 때는 이전의 기기 내 읽기 진도와 스크롤 위치를 초기화하여
             // 백업 파일 내 책갈피 기준(가장 마지막 책갈피 화)으로 열릴 수 있도록 유도합니다.
-            localStorage.removeItem(`reader_current_chapter_${bookData.title}`);
-            localStorage.removeItem(`reader_scroll_ratio_${bookData.title}`);
+            appStorage.removeItem(`reader_current_chapter_${bookData.title}`);
+            appStorage.removeItem(`reader_scroll_ratio_${bookData.title}`);
 
             // 북마크 정보 복원
             if (bookData.bookmarks && Array.isArray(bookData.bookmarks)) {
@@ -708,11 +777,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // 설정(테마, 글꼴, 글자크기, 커스텀 색상) 정보 복원
             if (bookData.settings) {
               const s = bookData.settings;
-              if (s.theme) localStorage.setItem('reader_theme', s.theme);
-              if (s.fontFamily) localStorage.setItem('reader_font_family', s.fontFamily);
-              if (s.fontSize) localStorage.setItem('reader_font_size', s.fontSize);
-              if (s.customBg) localStorage.setItem('reader_custom_bg', s.customBg);
-              if (s.customText) localStorage.setItem('reader_custom_text', s.customText);
+              if (s.theme) appStorage.setItem('reader_theme', s.theme);
+              if (s.fontFamily) appStorage.setItem('reader_font_family', s.fontFamily);
+              if (s.fontSize) appStorage.setItem('reader_font_size', s.fontSize);
+              if (s.customBg) appStorage.setItem('reader_custom_bg', s.customBg);
+              if (s.customText) appStorage.setItem('reader_custom_text', s.customText);
               
               // 화면 즉시 리프레시
               restoreSettings();
@@ -757,14 +826,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // 책갈피(Bookmark) 데이터 관리
   const loadBookmarks = () => {
     try {
-      return JSON.parse(localStorage.getItem('reader_bookmarks') || '{}');
+      return JSON.parse(appStorage.getItem('reader_bookmarks') || '{}');
     } catch {
       return {};
     }
   };
 
   const saveBookmarks = (bookmarks) => {
-    localStorage.setItem('reader_bookmarks', JSON.stringify(bookmarks));
+    appStorage.setItem('reader_bookmarks', JSON.stringify(bookmarks));
   };
 
   const updateBookmarkButtonState = () => {
@@ -819,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       if (docHeight > 0) {
         const ratio = window.scrollY / docHeight;
-        localStorage.setItem(`reader_scroll_ratio_${currentFileName}`, ratio.toString());
+        appStorage.setItem(`reader_scroll_ratio_${currentFileName}`, ratio.toString());
       }
     }, 300);
   });
@@ -876,12 +945,12 @@ document.addEventListener('DOMContentLoaded', () => {
       currentFileName = dirHandle.name;
       await saveBook(currentFileName, parsedChapters, dirHandle);
       
-      localStorage.setItem('reader_active_book_title', currentFileName);
+      appStorage.setItem('reader_active_book_title', currentFileName);
       
       chapters = parsedChapters;
       currentChapterIndex = 0;
-      localStorage.setItem(`reader_current_chapter_${currentFileName}`, '0');
-      localStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
+      appStorage.setItem(`reader_current_chapter_${currentFileName}`, '0');
+      appStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
 
       uploadContainer.classList.remove('active');
       viewerContainer.classList.add('active');
@@ -1068,11 +1137,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     saveBook(currentFileName, chapters).then(() => {
-      localStorage.setItem('reader_active_book_title', currentFileName);
+      appStorage.setItem('reader_active_book_title', currentFileName);
       
       currentChapterIndex = 0;
-      localStorage.setItem(`reader_current_chapter_${currentFileName}`, '0');
-      localStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
+      appStorage.setItem(`reader_current_chapter_${currentFileName}`, '0');
+      appStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
       
       uploadContainer.classList.remove('active');
       viewerContainer.classList.add('active');
@@ -1116,11 +1185,11 @@ document.addEventListener('DOMContentLoaded', () => {
       chapters = parsedChapters;
       
       saveBook(currentFileName, chapters).then(() => {
-        localStorage.setItem('reader_active_book_title', currentFileName);
+        appStorage.setItem('reader_active_book_title', currentFileName);
         
         currentChapterIndex = 0;
-        localStorage.setItem(`reader_current_chapter_${currentFileName}`, '0');
-        localStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
+        appStorage.setItem(`reader_current_chapter_${currentFileName}`, '0');
+        appStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
         
         uploadContainer.classList.remove('active');
         viewerContainer.classList.add('active');
@@ -1201,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (restoreScroll) {
       setTimeout(() => {
-        const savedRatio = parseFloat(localStorage.getItem(`reader_scroll_ratio_${currentFileName}`) || '0');
+        const savedRatio = parseFloat(appStorage.getItem(`reader_scroll_ratio_${currentFileName}`) || '0');
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         if (docHeight > 0 && savedRatio > 0) {
           window.scrollTo({ top: docHeight * savedRatio, behavior: 'instant' });
@@ -1211,10 +1280,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 50);
     } else {
       window.scrollTo({ top: 0, behavior: 'instant' });
-      localStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
+      appStorage.setItem(`reader_scroll_ratio_${currentFileName}`, '0');
     }
     
-    localStorage.setItem(`reader_current_chapter_${currentFileName}`, currentChapterIndex.toString());
+    appStorage.setItem(`reader_current_chapter_${currentFileName}`, currentChapterIndex.toString());
     
     updateTOCSelection();
     updateProgressBar();

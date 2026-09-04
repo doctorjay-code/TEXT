@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>문학적 감성 TXT eBook 리더기</title>
+  <title>eBook 리더기</title>
+
+  <!-- iOS 웹앱(PWA) 및 홈 화면 아이콘 설정 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="eBook 리더기">
+  <meta name="theme-color" content="#faf9f5">
+
   <!-- Google Fonts 및 Pretendard CDN 로드 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +21,23 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-cream font-serif">
+
+  <!-- 보안 인증 오버레이 (Schedule 스타일) -->
+  <div id="authModalOverlay" class="auth-modal-overlay active">
+    <div class="auth-card">
+      <div class="auth-icon">🔒</div>
+      <h2 class="auth-title">eBook 리더기</h2>
+      <p class="auth-subtitle">서재에 접속하려면 비밀번호를 입력해주세요.</p>
+      
+      <div class="auth-input-group">
+        <input type="password" id="authPasswordInput" class="auth-input" placeholder="비밀번호 입력..." autocomplete="off" />
+        <button id="authSubmitBtn" class="auth-submit-btn">접속하기</button>
+      </div>
+      
+      <div id="authErrorMsg" class="auth-error-msg hidden"></div>
+      <div id="authLockoutTimer" class="auth-lockout-timer hidden"></div>
+    </div>
+  </div>
 
   <!-- 전체 레이아웃 컨테이너 -->
   <div class="app-container">
@@ -43,6 +69,10 @@
           <button id="btn-library-main" class="btn btn-upload" style="cursor: pointer;">
             📚 내 책장
           </button>
+
+          <button id="btn-lock-main" class="btn btn-upload" style="cursor: pointer;">
+            🔒 잠금
+          </button>
         </div>
         <span class="file-hint">오프라인으로 동작하며, 어떤 데이터도 서버로 전송되지 않습니다.</span>
       </div>
@@ -53,12 +83,15 @@
       
       <!-- 상단 네비게이션 헤더 -->
       <header class="reader-header">
-        <div class="header-left-group" style="display: flex; gap: 0.5rem;">
+        <div class="header-left-group" style="display: flex; align-items: center; gap: 0.5rem;">
           <button class="btn btn-open-file" id="btn-open-file" style="white-space: nowrap; padding: 0.5rem 0.85rem; font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
             📁 새 책 열기
           </button>
           <button class="btn btn-library" id="btn-library" style="white-space: nowrap; padding: 0.5rem 0.85rem; font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
             📚 내 책장
+          </button>
+          <button class="btn" id="btn-lock-viewer" title="서재 잠금" style="white-space: nowrap; padding: 0.5rem 0.85rem; font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
+            🔒 잠금
           </button>
         </div>
         <div class="header-nav-group" style="flex: 1; max-width: 600px; margin-left: 1rem;">
@@ -221,6 +254,8 @@
 
   </div>
 
+  <script src="auth-config.js"></script>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
